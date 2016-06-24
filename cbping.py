@@ -11,6 +11,9 @@ import time
 import pprint
 from requests.auth import HTTPBasicAuth
 
+username = 'Administrator'
+password = 'couchbase'
+
 pprinter = pprint.PrettyPrinter(indent=4)
 
 # This helpful function came from
@@ -29,13 +32,13 @@ def walk_keys(obj, path=""):
         yield path
 
 
-# MY FIRST FUNCTION
 
-def myfirstfunction(nodeWithAHostname):
+def testPortsOnNode(nodeWithAHostname):
     currentHostname = nodeWithAHostname['hostname']
     hostnamepart, justThePort = currentHostname.split(":", 1)
 
-    allThePorts = (justThePort, 8092, 8093, 11209, 11210, 11211, 80, 8080)
+    # For reference please see http://developer.couchbase.com/documentation/server/current/install/install-ports.html
+    allThePorts = (justThePort, 8092, 8093, 8094, 9100, 9102, 9103, 9104, 9105, 9998, 9999, 11207, 11209, 11210, 11211, 11214, 11215, 18091, 18092, 18093, 4369, 21100)
 
     formatString3 = "%-20s %-10s %-40s %-20s"
 
@@ -43,8 +46,6 @@ def myfirstfunction(nodeWithAHostname):
     print (formatString3 % ("--------", "----", "------", "------------"))
 
     for eachPortToTest in allThePorts:
-
-        # print "Trying port " + str(eachPort)
 
         eachaddress2 = (hostnamepart, int(eachPortToTest))
         sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -68,7 +69,6 @@ def myfirstfunction(nodeWithAHostname):
         print (formatString3 % (hostnamepart, eachPortToTest, msg, str(elapsed)))
 
 
-# MY FIRST FUNCTION
 
 
 
@@ -86,7 +86,7 @@ poolsdefaulturl = 'http://' + host + ':' + port + '/pools/default'
 
 print 'I will connect to: ' + poolsdefaulturl + ' and run some tests.'
 
-poolsdefault = requests.get(poolsdefaulturl)
+poolsdefault = requests.get(poolsdefaulturl,auth=HTTPBasicAuth(username, password))
 
 httpstatuscode = poolsdefault.status_code
 
@@ -128,7 +128,7 @@ if (httpstatuscode == 200):
 
     for eachNode in nodes:
         eachHostname = eachNode['hostname']
-        myfirstfunction(eachNode)
+        testPortsOnNode(eachNode)
 
         print
 
@@ -149,7 +149,7 @@ if (httpstatuscode == 200):
     print
     print 'I will get the info from: ' + remoteClustersUri
 
-    remoteclusters = requests.get(remoteClustersUri,auth=HTTPBasicAuth('Administrator', 'couchbase'))
+    remoteclusters = requests.get(remoteClustersUri,auth=HTTPBasicAuth(username, password))
 
     rchttpstatuscode = remoteclusters.status_code
 
@@ -180,7 +180,7 @@ if (httpstatuscode == 200):
 
         for eachrc in rcjson_dict:
             # print 'Working on Remote Cluster host: ' + eachrc['hostname']
-            myfirstfunction(eachrc)
+            testPortsOnNode(eachrc)
             print
 
     else:
@@ -221,8 +221,12 @@ if (httpstatuscode == 200):
             bucketnodes = bucket['nodes']
             basicStats = bucket['basicStats']
             itemCount = basicStats['itemCount']
+            bucketType = bucket['bucketType']
 
-            print (rcformatstring % (bucket['name'], itemCount, bucket['bucketType']))
+            if (bucketType == 'membase'):
+                bucketType = 'Couchbase'
+
+            print (rcformatstring % (bucket['name'], itemCount, bucketType))
 
             for bucketNode in bucketnodes:
                 hostname = bucketNode['hostname']
