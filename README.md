@@ -1,5 +1,19 @@
 # cbping
 Basic python script to help automate simple network sanity checking
+
+Usage:
+
+    pip install requests
+    
+    git clone https://github.com/couchbasebrian/cbping.git
+    
+    cd cbping
+    
+    python cbping.py <host> <port>
+
+Usually <port> will be 8081
+
+Sample output:
     
     I will connect to: http://172.23.99.170:8091/pools/default and run some tests.
     This node says that there are 2 nodes in the cluster.
