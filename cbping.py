@@ -2,14 +2,16 @@
 # Brian Williams
 # June 21, 2016
 # Connect to CB and do some basic tests
-# Developed with Python 2.7.8
 
 import json
 import requests
 import sys
 import socket
 import time
+import pprint
+from requests.auth import HTTPBasicAuth
 
+pprinter = pprint.PrettyPrinter(indent=4)
 
 # This helpful function came from
 # http://stackoverflow.com/questions/33489209/print-unique-json-keys-in-dot-notation-using-python
@@ -25,6 +27,49 @@ def walk_keys(obj, path=""):
                 yield r
     else:
         yield path
+
+
+# MY FIRST FUNCTION
+
+def myfirstfunction(nodeWithAHostname):
+    currentHostname = nodeWithAHostname['hostname']
+    hostnamepart, justThePort = currentHostname.split(":", 1)
+
+    allThePorts = (justThePort, 8092, 8093, 11209, 11210, 11211, 80, 8080)
+
+    formatString3 = "%-20s %-10s %-40s %-20s"
+
+    print (formatString3 % ("hostname", "port", "result", "elapsed time"))
+    print (formatString3 % ("--------", "----", "------", "------------"))
+
+    for eachPortToTest in allThePorts:
+
+        # print "Trying port " + str(eachPort)
+
+        eachaddress2 = (hostnamepart, int(eachPortToTest))
+        sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock2.settimeout(10)
+
+        t1 = time.clock()
+        t2 = 0
+        elapsed = 0
+        msg = "-"
+
+        try:
+            sock2.connect(eachaddress2)
+            msg = "SUCCESS"
+        except Exception as e:
+            msg = str(e)
+        finally:
+            t2 = time.clock()
+            elapsed = t2 - t1
+            sock2.close()
+
+        print (formatString3 % (hostnamepart, eachPortToTest, msg, str(elapsed)))
+
+
+# MY FIRST FUNCTION
+
 
 
 # Check the command line arguments given
@@ -47,7 +92,7 @@ httpstatuscode = poolsdefault.status_code
 
 if (httpstatuscode == 200):
 
-    print 'I was able to connect and get a response'
+    # print 'I was able to connect and get a response'
 
     responsejson = poolsdefault.json()
 
@@ -60,7 +105,8 @@ if (httpstatuscode == 200):
 
     name =  json_dict['name']
 
-    print 'The name of the node I connected to is: ' + name
+    #print
+    #print 'The name of the node I connected to is: ' + name
 
     nodes = json_dict['nodes']
 
@@ -68,56 +114,134 @@ if (httpstatuscode == 200):
 
     #print type(nodes)
 
-    formattingstring = "%30s %15s %30s"
+    formattingstring = "%-30s %-15s %-30s"
 
-    print (formattingstring % ('hostname','status', 'version'))
+    print
+    print (formattingstring % ('Cluster Node','Node Status', 'Node CB version'))
+    print (formattingstring % ('------------','-----------', '---------------'))
 
-    for eachnode in nodes:
-        print (formattingstring % (eachnode['hostname'] , eachnode['status'], eachnode['version']))
+    for eachNode in nodes:
+        print (formattingstring % (eachNode['hostname'] , eachNode['status'], eachNode['version']))
 
-    print 'I will now check each of these nodes:'
+    print
+    # print 'I will now check each of these nodes:'
 
-    for eachnode in nodes:
-        eachHostname = eachnode['hostname']
-        lhs, rhs = eachHostname.split(":", 1)
-        print 'Working on host: ' + lhs
+    for eachNode in nodes:
+        eachHostname = eachNode['hostname']
+        myfirstfunction(eachNode)
 
-        allPorts = ( rhs, 11210, 11211, 8092, 8093, 80, 8080)
+        print
 
-        formatString2 = "%10s %40s %20s"
+    # Done iterating over the nodes in the first http get
 
-        print (formatString2 % ( "port", "result", "elapsed time" ))
+    # Move on to the next uri
 
-        for eachPort in allPorts:
+    print '---------- Remote Clusters ----------'
 
-            # print "Trying port " + str(eachPort)
+    remoteClusters = json_dict['remoteClusters']
 
-            eachAddress = (lhs, int(eachPort))
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(10)
+    # Remote Clusters Requires Authentication otherwise you
+    # get a 401 Unauthorized
+    remoteClustersUriEnd = remoteClusters['uri']
 
-            t1 = time.clock()
-            t2 = 0
-            elapsed = 0
+    remoteClustersUri = 'http://' + host + ':' + port + remoteClustersUriEnd
 
-            msg = "-"
+    print
+    print 'I will get the info from: ' + remoteClustersUri
 
-            try:
-                sock.connect(eachAddress)
-                msg = "SUCCESS"
-            except Exception as e:
-                msg = str(e)
-            finally:
-                t2 = time.clock()
-                elapsed = t2 - t1
-                sock.close()
+    remoteclusters = requests.get(remoteClustersUri,auth=HTTPBasicAuth('Administrator', 'couchbase'))
 
-            print (formatString2 % ( eachPort, msg, str(elapsed) ) )
+    rchttpstatuscode = remoteclusters.status_code
+
+    if (rchttpstatuscode == 200):
+        print
+
+        rcResponsejson = remoteclusters.json()
+        # Useful for JSON reference
+        #for s in sorted(walk_keys(rcResponsejson)):
+        #    print s
+
+        rcformatstring = "%-10s %-25s %-20s %-50s"
+        print (rcformatstring % ('deleted', 'hostname', 'name', 'uri'))
+        print (rcformatstring % ('-------', '--------', '----', '---'))
+
+        # rcformatstring = "%-10s %-25s %-20s %-50s %-20s %-35s %-20s"
+        # print (rcformatstring % ('deleted', 'hostname', 'name', 'uri', 'username', 'uuid', 'validateURI'))
+        # print (rcformatstring % ('-------', '--------', '----', '---', '--------', '----', '-----------'))
+
+        rcresponsetext = remoteclusters.text
+        rcjson_dict = json.loads(rcresponsetext)
+
+        for eachrc in rcjson_dict:
+            # print (rcformatstring % (str(eachrc['deleted']), eachrc['hostname'], eachrc['name'], eachrc['uri'], eachrc['username'], eachrc['uuid'], eachrc['validateURI']))
+            print (rcformatstring % (str(eachrc['deleted']), eachrc['hostname'], eachrc['name'], eachrc['uri']))
+
+        print
+
+        for eachrc in rcjson_dict:
+            # print 'Working on Remote Cluster host: ' + eachrc['hostname']
+            myfirstfunction(eachrc)
+            print
+
+    else:
+        print 'RC: Got http error code:' + str(rchttpstatuscode)
+
+
+    # Move on to the next uri
+
+    print '-------------- Buckets --------------'
+
+    poolsdefaultbucketsurl = 'http://' + host + ':' + port + '/pools/default/buckets'
+
+    print
+    print 'I will get bucket info from: ' + poolsdefaultbucketsurl
+
+    poolsdefaultbuckets = requests.get(poolsdefaultbucketsurl)
+
+    pdbhttpstatuscode = poolsdefaultbuckets.status_code
+
+    if (pdbhttpstatuscode == 200):
+        # print 'PDB: It worked'
+
+        pdbresponsejson = poolsdefaultbuckets.json()
+
+        # Useful for JSON reference
+        #for s in sorted(walk_keys(pdbresponsejson)):
+        #    print s
+
+        pdbresponsetext = poolsdefaultbuckets.text
+        pdbjson_dict = json.loads(pdbresponsetext)
+
+        print
+        rcformatstring = "%-20s %-10s %-15s"
+        print (rcformatstring % ('Bucket Name', 'itemCount', 'Bucket Type'))
+        print (rcformatstring % ('-----------', '---------', '-----------'))
+
+        for bucket in pdbjson_dict:
+            bucketnodes = bucket['nodes']
+            basicStats = bucket['basicStats']
+            itemCount = basicStats['itemCount']
+
+            print (rcformatstring % (bucket['name'], itemCount, bucket['bucketType']))
+
+            for bucketNode in bucketnodes:
+                hostname = bucketNode['hostname']
+                # print hostname
+                replication = bucketNode['replication']
+                # print replication
+
+
+    else:
+        print 'PDB: Got http error code:' + str(httpstatuscode)
+
+    # end of section where first http get was successful
+
+
 
 else:
-    print 'Got http error code:' + str(httpstatuscode)
+    print 'PD: Got http error code:' + str(httpstatuscode)
 
-
+print
 print 'Goodbye'
 
 # EOF
