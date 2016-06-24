@@ -68,21 +68,52 @@ def testPortsOnNode(nodeWithAHostname):
 
         print (formatString3 % (hostnamepart, eachPortToTest, msg, str(elapsed)))
 
-
-
-
+#############################################
 
 # Check the command line arguments given
 argsgiven = len(sys.argv)
 
-if argsgiven != 3:
-    print 'Usage: cbping host port'
+clusterMode = False
+singleNodeMode = False
+
+for eachArg in sys.argv:
+    if (eachArg == '--cluster'):
+        clusterMode = True
+    if (eachArg == '--single-node'):
+        singleNodeMode = True
+
+if argsgiven < 3:
+    print 'Usage: cbping.py host port <mode>'
+    print 'Where <mode> is either:'
+    print '       --cluster     :  Use REST to enumerate all the nodes.  This is the default.'
+    print '       --single-node :  Just do tests on this one node specified'
     exit(0)
+
+if (clusterMode == True):
+    print 'I see that you want cluster mode'
+
+if (singleNodeMode == True):
+    print 'I see that you want single-node mode'
+
+if ((clusterMode == False) and (singleNodeMode == False)):
+    print 'I will assume that you meant cluster mode'
+
+# Look at the command line arguments
 
 host = sys.argv[1]
 port = sys.argv[2]
 httpstatuscode = 0
 poolsdefaulturl = 'http://' + host + ':' + port + '/pools/default'
+
+# Okay lets get started
+
+if (singleNodeMode == True):
+    singleNodeDict = dict()
+    singleNodeDict['hostname'] = host + ':' + port
+    testPortsOnNode(singleNodeDict)
+    sys.exit(0)
+
+# Cluster mode
 
 print 'I will connect to: ' + poolsdefaulturl + ' and run some tests.'
 
