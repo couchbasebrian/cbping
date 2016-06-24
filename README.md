@@ -11,7 +11,7 @@ Usage:
     
     python cbping.py <host> <port>
 
-Usually <port> will be 8081
+Please specify the host and port of a node in an established cluster, not an uninitialized node showing the setup wizard.  Usually port will be 8081.
 
 Sample output:
     
