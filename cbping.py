@@ -1,8 +1,3 @@
-# cbping
-# Brian Williams
-# June 21, 2016
-# Connect to CB and do some basic tests
-
 import json
 import requests
 import sys
@@ -10,9 +5,19 @@ import socket
 import time
 import pprint
 from requests.auth import HTTPBasicAuth
+import argparse
+parser = argparse.ArgumentParser()
 
-username = 'Administrator'
-password = 'couchbase'
+#set up the four arguments that can be passed into the script from the command line.
+parser.add_argument('-P', '--port', help='Server port to test.', type=int, required=True)
+parser.add_argument('-b', '--bucketname', dest='bucketname', help='The name of the bucket to insert into.', action='store_true')
+parser.add_argument('-H', '--hostname', dest='hostname', required=True, help='Host name or IP Address of Couchbase cluster')
+parser.add_argument('-u', '--username', dest='username', help='Administrative username.', required=True, default='Administrator')
+parser.add_argument('-p', '--password', dest='password', help='Administrative password.', required=True, default='password')
+parser.add_argument('-c', '--cluster', dest='clusterMode', help='Check the whole cluster?', default=False, action='store_true')
+parser.add_argument('-s', '--single-node', dest='singleNodeMode', help='Only check a single node?', default=False, action='store_true')
+
+args = parser.parse_args()
 
 pprinter = pprint.PrettyPrinter(indent=4)
 
@@ -30,7 +35,6 @@ def walk_keys(obj, path=""):
                 yield r
     else:
         yield path
-
 
 
 def testPortsOnNode(nodeWithAHostname):
@@ -70,46 +74,25 @@ def testPortsOnNode(nodeWithAHostname):
 
 #############################################
 
-# Check the command line arguments given
-argsgiven = len(sys.argv)
-
-clusterMode = False
-singleNodeMode = False
-
-for eachArg in sys.argv:
-    if (eachArg == '--cluster'):
-        clusterMode = True
-    if (eachArg == '--single-node'):
-        singleNodeMode = True
-
-if argsgiven < 3:
-    print 'Usage: cbping.py host port <mode>'
-    print 'Where <mode> is either:'
-    print '       --cluster     :  Use REST to enumerate all the nodes.  This is the default.'
-    print '       --single-node :  Just do tests on this one node specified'
-    exit(0)
-
-if (clusterMode == True):
+if (args.clusterMode == True):
     print 'I see that you want cluster mode'
 
-if (singleNodeMode == True):
+if (args.singleNodeMode == True):
     print 'I see that you want single-node mode'
 
-if ((clusterMode == False) and (singleNodeMode == False)):
+if ((args.clusterMode == False) and (args.singleNodeMode == False)):
     print 'I will assume that you meant cluster mode'
 
 # Look at the command line arguments
 
-host = sys.argv[1]
-port = sys.argv[2]
 httpstatuscode = 0
-poolsdefaulturl = 'http://' + host + ':' + port + '/pools/default'
+poolsdefaulturl = 'http://' + args.hostname + ':' + str(args.port) + '/pools/default'
 
 # Okay lets get started
 
-if (singleNodeMode == True):
+if (args.singleNodeMode == True):
     singleNodeDict = dict()
-    singleNodeDict['hostname'] = host + ':' + port
+    singleNodeDict['hostname'] = args.hostname + ':' + str(args.port)
     testPortsOnNode(singleNodeDict)
     sys.exit(0)
 
@@ -117,7 +100,7 @@ if (singleNodeMode == True):
 
 print 'I will connect to: ' + poolsdefaulturl + ' and run some tests.'
 
-poolsdefault = requests.get(poolsdefaulturl,auth=HTTPBasicAuth(username, password))
+poolsdefault = requests.get(poolsdefaulturl,auth=HTTPBasicAuth(args.username, args.password))
 
 httpstatuscode = poolsdefault.status_code
 
@@ -175,12 +158,12 @@ if (httpstatuscode == 200):
     # get a 401 Unauthorized
     remoteClustersUriEnd = remoteClusters['uri']
 
-    remoteClustersUri = 'http://' + host + ':' + port + remoteClustersUriEnd
+    remoteClustersUri = 'http://' + args.hostname + ':' + str(args.port) + remoteClustersUriEnd
 
     print
     print 'I will get the info from: ' + remoteClustersUri
 
-    remoteclusters = requests.get(remoteClustersUri,auth=HTTPBasicAuth(username, password))
+    remoteclusters = requests.get(remoteClustersUri,auth=HTTPBasicAuth(args.username, args.password))
 
     rchttpstatuscode = remoteclusters.status_code
 
@@ -222,7 +205,7 @@ if (httpstatuscode == 200):
 
     print '-------------- Buckets --------------'
 
-    poolsdefaultbucketsurl = 'http://' + host + ':' + port + '/pools/default/buckets'
+    poolsdefaultbucketsurl = 'http://' + args.hostname + ':' + str(args.port) + '/pools/default/buckets'
 
     print
     print 'I will get bucket info from: ' + poolsdefaultbucketsurl
