@@ -9,9 +9,18 @@ Usage:
     
     cd cbping
     
-    python cbping.py <host> <port>
+    python cbping.py -H <host> -P <port> -u <username> -p <password> [-c] [-s]
+    
+    An example for a simgle node test would be:
+    
+        python cbping.py -H 172.23.99.170 -P 8091 -u Administrator -p password -s
+    
+    or for a cluster wide check:
+    
+        python cbping.py -H 172.23.99.170 -P 8091 -u Administrator -p password -c
+    
 
-Please specify the host and port of a node in an established cluster, not an uninitialized node showing the setup wizard.  Usually port will be 8081.
+Please specify the host and port of a node in an established cluster, not an uninitialized node showing the setup wizard.  Usually port will be 8091.
 
 Sample output:
     
