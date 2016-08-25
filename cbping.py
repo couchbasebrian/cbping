@@ -1,3 +1,5 @@
+#  !/usr/bin/env python   # uncomment to make life easier on sh-compatible systems.
+
 import json
 import requests
 import sys
@@ -9,14 +11,16 @@ import argparse
 parser = argparse.ArgumentParser()
 
 #set up the four arguments that can be passed into the script from the command line.
-parser.add_argument('-P', '--port', help='Server port to test.', type=int, required=True)
-parser.add_argument('-b', '--bucketname', dest='bucketname', help='The name of the bucket to insert into.', action='store_true')
-parser.add_argument('-H', '--hostname', dest='hostname', required=True, help='Host name or IP Address of Couchbase cluster')
-parser.add_argument('-u', '--username', dest='username', help='Administrative username.', required=True, default='Administrator')
-parser.add_argument('-p', '--password', dest='password', help='Administrative password.', required=True, default='password')
-parser.add_argument('-c', '--cluster', dest='clusterMode', help='Check the whole cluster?', default=False, action='store_true')
-parser.add_argument('-s', '--single-node', dest='singleNodeMode', help='Only check a single node?', default=False, action='store_true')
-parser.add_argument('-rc', '--rcluster', dest='rcluster', help='Check connectivity to XDCR clusters', default=False, action='store_true')
+#parser.add_argument('-P', '--port', help='Server port to test.', type=int, required=True)
+parser.add_argument('-P',  '--port', help='Server port to test.', type=int, required=False, default=8091)
+parser.add_argument('-b',  '--bucketname',  dest='bucketname',     help='The name of the bucket to insert into.', action='store_true')
+parser.add_argument('-H',  '--hostname',    dest='hostname',       help='Host name or IP Address of Couchbase cluster', required=True)
+parser.add_argument('-u',  '--username',    dest='username',       help='Administrative username.', required=False, default='Administrator')
+parser.add_argument('-p',  '--password',    dest='password',       help='Administrative password.', required=False, default='password')
+parser.add_argument('-c',  '--cluster',     dest='clusterMode',    help='Check the whole cluster?', default=False, action='store_true')
+parser.add_argument('-s',  '--single-node', dest='singleNodeMode', help='Only check a single node?', default=False, action='store_true')
+parser.add_argument('-rc', '--rcluster',    dest='rcluster',       help='Check connectivity to XDCR clusters', default=False, action='store_true')
+parser.add_argument('-v',  '--verbose',     dest='beverbose',      help='Be verbose', default=False, action='store_true')
 
 args = parser.parse_args()
 
@@ -43,12 +47,40 @@ def testPortsOnNode(nodeWithAHostname):
 
     # For reference please see http://developer.couchbase.com/documentation/server/current/install/install-ports.html
     allThePorts = (justThePort, 8092, 8093, 8094, 9100, 9102, 9103, 9104, 9105, 9998, 9999, 11207, 11209, 11210, 11211, 11214, 11215, 18091, 18092, 18093, 4369, 21100)
+    portsDesc = [ "Console REST/HTTP",                        # 8091 (default)
+                  "Views, queries, XDCR, design documents",   # 8092
+                  "Query services REST/HTTP",                 # 8093
+                  "Search service external HTTP",             # 8094
+                  "Internal index admin",                     # 9100
+                  "Internal index HTTP",                      # 9102
+                  "Internal index build",                     # 9103
+                  "Internal index build",                     # 9104
+                  "Internal index maintenance",               # 9105
+                  "Internal REST",                            # 9998
+                  "Internal GSI for internal admins",         # 9999
+                  "Memcached SSL for smart client libraries", # 11207
+                  "Internal Bucket",                          # 11209
+                  "Memcached for smart client lib or Moxi",   # 11210
+                  "Pre-existing Couchbase Server & memcached (non-smart) client libraries (such as Moxi)", # 11211
+                  "SSL XDCR data encryption",                 # 11214
+                  "SSL XDCR data encryption",                 # 11215
+                  "Web Console SSL REST/HTTP traffic",        # 18091
+                  "SSL for views access, run queries, XDCR & update design documents", # 18092
+                  "N1QL SSL",                                 # 18093
+                  "Erlang Port Mapper",                       # 4369
+                  "Node data exchange"                        # 21100 to 21299 (inclusive)
+                   ]
 
-    formatString3 = "%-20s %-10s %-40s %-20s"
+    if args.beverbose:
+         formatString3 = "%-20s %-10s %-39s %-15s %-20s"
+         print (formatString3 % ("Hostname", "Port", "Result", "Elapsed Time*", "Description"))
+         print (formatString3 % ("--------", "----", "------", "------------",  "-----------" ))
+    else:
+         formatString3 = "%-20s %-10s %-39s %-15s"
+         print (formatString3 % ("Hostname", "Port", "Result", "Elapsed Time*"))
+         print (formatString3 % ("--------", "----", "------", "------------"))
 
-    print (formatString3 % ("Hostname", "Port", "Result", "Elapsed Time*"))
-    print (formatString3 % ("--------", "----", "------", "------------"))
-
+    testLoop = 0
     for eachPortToTest in allThePorts:
 
         eachaddress2 = (hostnamepart, int(eachPortToTest))
@@ -72,7 +104,12 @@ def testPortsOnNode(nodeWithAHostname):
             #elapsed = "%.6f" % (t2 - t1)
             sock2.close()
 
-        print (formatString3 % (hostnamepart, eachPortToTest, msg, str(elapsed)))
+        if args.beverbose:
+            print (formatString3 % (hostnamepart, eachPortToTest, msg, str(elapsed), portsDesc[testLoop]))
+        else:
+            print (formatString3 % (hostnamepart, eachPortToTest, msg, str(elapsed)))
+        testLoop += 1
+        
     print "*Elapsed time is in microseconds."
 
 #Test XDCR cluster if requested to
@@ -81,8 +118,7 @@ def checkRemoteCluster():
 
     remoteClusters = json_dict['remoteClusters']
 
-    # Remote Clusters Requires Authentication otherwise you
-    # get a 401 Unauthorized
+    # Remote Clusters Requires Authentication otherwise you get a 401 Unauthorized
     remoteClustersUriEnd = remoteClusters['uri']
 
     remoteClustersUri = 'http://' + args.hostname + ':' + str(args.port) + remoteClustersUriEnd
@@ -151,7 +187,9 @@ if (args.singleNodeMode == True):
     testPortsOnNode(singleNodeDict)
     sys.exit(0)
 
+
 # Cluster mode
+
 
 print 'I will connect to: ' + poolsdefaulturl + ' and run some tests.'
 

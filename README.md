@@ -1,5 +1,5 @@
 # cbping
-Basic python script to help automate simple network sanity checking
+Basic Python script to help automate simple network sanity checking
 
 Usage:
 
@@ -9,9 +9,9 @@ Usage:
     
     cd cbping
     
-    python cbping.py -H <host> -P <port> -u <username> -p <password> [-c] [-s] [-rc]
+    python cbping.py -H <host> [-P <port>] [-u <username>] [-p <password>] [-c] [-s] [-rc] [-v]
     
-    An example for a simgle node test would be:
+    An example for a single node test would be:
     
         python cbping.py -H 172.23.99.170 -P 8091 -u Administrator -p password -s
     
@@ -24,7 +24,8 @@ Usage:
         python cbping.py -H 172.23.99.170 -P 8091 -u Administrator -p password -c -rc
     
 
-Please specify the host and port of a node in an established cluster, not an uninitialized node showing the setup wizard.  Usually port will be 8091.
+Please specify the host and port of a node in an established cluster, not an uninitialized node showing the setup wizard. Default port is 8091.
+The verbose flag adds a description for each port being scanned.
 
 Sample output:
     
